@@ -30,7 +30,7 @@ pub fn render_3d(rl:&mut RaylibHandle, thread : &mut RaylibThread){
 
     
     while !rl.window_should_close(){
-        CUBE_DISTANCE += rl.get_mouse_wheel_move()/5.0;
+        CUBE_DISTANCE += rl.get_mouse_wheel_move()/50.0;
         let mut d: RaylibDrawHandle<'_> = rl.begin_drawing(thread);
         d.clear_background(Color::BLANK);
 

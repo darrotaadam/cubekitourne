@@ -14,9 +14,11 @@ pub fn render_3d(rl:&mut RaylibHandle, thread : &mut RaylibThread){
     let mut __x:f32;
     let mut __y:f32;
     let mut CUBE_DISTANCE:f32 = 0.7;
+    let mut ALTITUDE:f32 = -0.2;
     let mut rotated: Vector3;
     let mut angle:f32=0.0;
-
+/*
+    // CUBE
     all_vertex.push(Vector3::new(0.25, 0.25,0.25 ));
     all_vertex.push(Vector3::new(-0.25, 0.25,0.25 ));
     all_vertex.push(Vector3::new(0.25, -0.25,0.25 ));
@@ -26,21 +28,74 @@ pub fn render_3d(rl:&mut RaylibHandle, thread : &mut RaylibThread){
     all_vertex.push(Vector3::new(-0.25, 0.25,-0.25 ));
     all_vertex.push(Vector3::new(0.25, -0.25,-0.25 ));
     all_vertex.push(Vector3::new(-0.25, -0.25,-0.25 ));
+ */
+ 
+    // DIAMAND
+    all_vertex.push(Vector3::new(0.0, 0.20, 0.0));
+    
+    all_vertex.push(Vector3::new(0.20, 0.20, 0.00));
+    all_vertex.push(Vector3::new(0.18, 0.20, 0.08));
+    all_vertex.push(Vector3::new(0.14, 0.20, 0.14));
+    all_vertex.push(Vector3::new(0.08, 0.20, 0.18));
+    all_vertex.push(Vector3::new(0.00, 0.20, 0.20));
+    all_vertex.push(Vector3::new(-0.08, 0.20, 0.18));
+    all_vertex.push(Vector3::new(-0.14, 0.20, 0.14));
+    all_vertex.push(Vector3::new(-0.18, 0.20, 0.08));
+    all_vertex.push(Vector3::new(-0.20, 0.20, 0.00));
+    all_vertex.push(Vector3::new(-0.18, 0.20, -0.08));
+    all_vertex.push(Vector3::new(-0.14, 0.20, -0.14));
+    all_vertex.push(Vector3::new(-0.08, 0.20, -0.18));
+    all_vertex.push(Vector3::new(0.00, 0.20, -0.20));
+    all_vertex.push(Vector3::new(0.08, 0.20, -0.18));
+    all_vertex.push(Vector3::new(0.14, 0.20, -0.14));
+    all_vertex.push(Vector3::new(0.18, 0.20, -0.08));
+
+    all_vertex.push(Vector3::new(0.35, 0.10, 0.00));
+    all_vertex.push(Vector3::new(0.32, 0.10, 0.14));
+    all_vertex.push(Vector3::new(0.25, 0.10, 0.25));
+    all_vertex.push(Vector3::new(0.14, 0.10, 0.32));
+    all_vertex.push(Vector3::new(0.00, 0.10, 0.35));
+    all_vertex.push(Vector3::new(-0.14, 0.10, 0.32));
+    all_vertex.push(Vector3::new(-0.25, 0.10, 0.25));
+    all_vertex.push(Vector3::new(-0.32, 0.10, 0.14));
+    all_vertex.push(Vector3::new(-0.35, 0.10, 0.00));
+    all_vertex.push(Vector3::new(-0.32, 0.10, -0.14));
+    all_vertex.push(Vector3::new(-0.25, 0.10, -0.25));
+    all_vertex.push(Vector3::new(-0.14, 0.10, -0.32));
+    all_vertex.push(Vector3::new(0.00, 0.10, -0.35));
+    all_vertex.push(Vector3::new(0.14, 0.10, -0.32));
+    all_vertex.push(Vector3::new(0.25, 0.10, -0.25));
+    all_vertex.push(Vector3::new(0.32, 0.10, -0.14));
+
+    all_vertex.push(Vector3::new(0.0, -0.4, 0.0));
+    
+
 
 
     
     while !rl.window_should_close(){
         CUBE_DISTANCE += rl.get_mouse_wheel_move()/5.0;
+        match rl.get_char_pressed(){
+            None => println!("..."),
+            Some(c) => {
+                if c == 'h' {
+                    ALTITUDE+=0.005;
+                } 
+                else if c == 'b' {
+                    ALTITUDE -=0.005
+                }
+            },
+        }
         let mut d: RaylibDrawHandle<'_> = rl.begin_drawing(thread);
         d.clear_background(Color::BLANK);
 
 
         //affichage
         for v in &all_vertex {
-            angle += 0.001;
+            angle += 0.0001;
             rotated = rotate(&v,angle);
             
-            let translated:Vector3 = Vector3::new(rotated.x, rotated.y, rotated.z + CUBE_DISTANCE);
+            let translated:Vector3 = Vector3::new(rotated.x, rotated.y + ALTITUDE, rotated.z + CUBE_DISTANCE);
             (_x, _y) = to2d(&translated);
 
 
@@ -50,7 +105,7 @@ pub fn render_3d(rl:&mut RaylibHandle, thread : &mut RaylibThread){
             for other in &all_vertex {
                 other_rotated = rotate(&other,angle);
                 
-                let other_translated:Vector3 = Vector3::new(other_rotated.x, other_rotated.y, other_rotated.z + CUBE_DISTANCE);
+                let other_translated:Vector3 = Vector3::new(other_rotated.x, other_rotated.y + ALTITUDE, other_rotated.z + CUBE_DISTANCE);
                 let (__x, __y) = to2d(&other_translated);
                 let other_coords = ortho_to_screen(__x, __y, &mut d);
                 d.draw_line(
@@ -79,8 +134,8 @@ fn ortho_to_screen(x:f32, y:f32, d: & RaylibDrawHandle<'_>)-> (i32, i32){
     let scr_x: f32 = (WIDTH/2.0) + x * (WIDTH/2.0);
 	let scr_y: f32 = (HEIGHT/2.0) + y * (HEIGHT/2.0) * -1.0;
     
-    println!("   from    ({},{})",x, y);
-    println!("  to      ({},{})", scr_x, scr_y);
+    //println!("   from    ({},{})",x, y);
+    //println!("  to      ({},{})", scr_x, scr_y);
 	return (scr_x as i32, scr_y as i32);
 }
 

@@ -2,112 +2,155 @@ use raylib::math::Vector3;
 use raylib::prelude::*;
 use std::thread;
 use std::time::Duration;
+use std::fs::File;
+use std::io::BufReader;
+use std::path::Path;
+use serde_json::{Value,Result};
+use serde::Deserialize;
 
-const POINT_WIDTH:i32 = 10;
+const POINT_WIDTH:i32 = 5;
 
 
+#[derive(Deserialize)]
+struct JsonVector3{
+    x: f32,
+    y: f32,
+    z: f32
+}
 
-pub fn render_3d(rl:&mut RaylibHandle, thread : &mut RaylibThread){
-    let mut all_vertex: Vec<Vector3> = Vec::new();
-    let mut _x:f32;
-    let mut _y:f32;
-    let mut __x:f32;
-    let mut __y:f32;
-    let mut CUBE_DISTANCE:f32 = 0.7;
-    let mut ALTITUDE:f32 = -0.2;
-    let mut rotated: Vector3;
-    let mut angle:f32=0.0;
-/*
-    // CUBE
-    all_vertex.push(Vector3::new(0.25, 0.25,0.25 ));
-    all_vertex.push(Vector3::new(-0.25, 0.25,0.25 ));
-    all_vertex.push(Vector3::new(0.25, -0.25,0.25 ));
-    all_vertex.push(Vector3::new(-0.25, -0.25,0.25 ));
-
-    all_vertex.push(Vector3::new(0.25, 0.25,-0.25 ));
-    all_vertex.push(Vector3::new(-0.25, 0.25,-0.25 ));
-    all_vertex.push(Vector3::new(0.25, -0.25,-0.25 ));
-    all_vertex.push(Vector3::new(-0.25, -0.25,-0.25 ));
- */
- 
-    // DIAMAND
-    all_vertex.push(Vector3::new(0.0, 0.20, 0.0));
-    
-    all_vertex.push(Vector3::new(0.20, 0.20, 0.00));
-    all_vertex.push(Vector3::new(0.18, 0.20, 0.08));
-    all_vertex.push(Vector3::new(0.14, 0.20, 0.14));
-    all_vertex.push(Vector3::new(0.08, 0.20, 0.18));
-    all_vertex.push(Vector3::new(0.00, 0.20, 0.20));
-    all_vertex.push(Vector3::new(-0.08, 0.20, 0.18));
-    all_vertex.push(Vector3::new(-0.14, 0.20, 0.14));
-    all_vertex.push(Vector3::new(-0.18, 0.20, 0.08));
-    all_vertex.push(Vector3::new(-0.20, 0.20, 0.00));
-    all_vertex.push(Vector3::new(-0.18, 0.20, -0.08));
-    all_vertex.push(Vector3::new(-0.14, 0.20, -0.14));
-    all_vertex.push(Vector3::new(-0.08, 0.20, -0.18));
-    all_vertex.push(Vector3::new(0.00, 0.20, -0.20));
-    all_vertex.push(Vector3::new(0.08, 0.20, -0.18));
-    all_vertex.push(Vector3::new(0.14, 0.20, -0.14));
-    all_vertex.push(Vector3::new(0.18, 0.20, -0.08));
-
-    all_vertex.push(Vector3::new(0.35, 0.10, 0.00));
-    all_vertex.push(Vector3::new(0.32, 0.10, 0.14));
-    all_vertex.push(Vector3::new(0.25, 0.10, 0.25));
-    all_vertex.push(Vector3::new(0.14, 0.10, 0.32));
-    all_vertex.push(Vector3::new(0.00, 0.10, 0.35));
-    all_vertex.push(Vector3::new(-0.14, 0.10, 0.32));
-    all_vertex.push(Vector3::new(-0.25, 0.10, 0.25));
-    all_vertex.push(Vector3::new(-0.32, 0.10, 0.14));
-    all_vertex.push(Vector3::new(-0.35, 0.10, 0.00));
-    all_vertex.push(Vector3::new(-0.32, 0.10, -0.14));
-    all_vertex.push(Vector3::new(-0.25, 0.10, -0.25));
-    all_vertex.push(Vector3::new(-0.14, 0.10, -0.32));
-    all_vertex.push(Vector3::new(0.00, 0.10, -0.35));
-    all_vertex.push(Vector3::new(0.14, 0.10, -0.32));
-    all_vertex.push(Vector3::new(0.25, 0.10, -0.25));
-    all_vertex.push(Vector3::new(0.32, 0.10, -0.14));
-
-    all_vertex.push(Vector3::new(0.0, -0.4, 0.0));
-    
+#[derive(Deserialize)]
+struct JsonShape{
+    center: JsonVector3,
+    points: Vec<JsonVector3>
+}
 
 
 
-    
-    while !rl.window_should_close(){
-        CUBE_DISTANCE += rl.get_mouse_wheel_move()/5.0;
-        match rl.get_char_pressed(){
-            None => println!("..."),
-            Some(c) => {
-                if c == 'h' {
-                    ALTITUDE+=0.005;
-                } 
-                else if c == 'b' {
-                    ALTITUDE -=0.005
-                }
-            },
+struct Camera3d{
+    position:Vector3,
+    direction:Vector3
+}
+
+impl Camera3d{
+    fn new()->Camera3d{
+        Camera3d { 
+            position: Vector3::new(0.0, 0.0, 0.0),
+            direction: Vector3::new(0.0, 0.0, 0.0) 
         }
-        let mut d: RaylibDrawHandle<'_> = rl.begin_drawing(thread);
-        d.clear_background(Color::BLANK);
+    }
+}
 
+
+struct Shape3d {
+    points : Vec<Vector3>,
+    center : Vector3,
+    angle_x : f32,
+    angle_y : f32,
+    angle_z : f32
+}
+
+impl Shape3d{
+    fn new(x:f32, y:f32, z:f32)->Shape3d{
+        Shape3d { 
+            points: Vec::new(), 
+            center: Vector3::new(x, y, z) ,
+            angle_x : 0.0,
+            angle_y : 0.0,
+            angle_z : 0.0
+        }
+    }
+
+
+
+    fn rotate_y(&self, point:&Vector3, angle:f32)->Vector3{
+        let cos = angle.cos();
+        let sin = angle.sin();
+        Vector3::new(
+            point.x*cos - point.z*sin,
+            point.y ,
+            point.x*sin + point.z*cos
+        )
+    }
+    fn rotate_z(&self, point:&Vector3, angle:f32)->Vector3{
+        // tourne autour de l'axe y_
+        let cos = angle.cos();
+        let sin = angle.sin();
+        Vector3::new(
+            point.x*cos - point.y*sin,
+            point.x*sin + point.y*cos,
+            point.z
+        )
+    }
+    fn rotate_x(&self, point:&Vector3, angle:f32)->Vector3{
+        let cos = angle.cos();
+        let sin = angle.sin();
+        Vector3::new(
+            point.x,
+            point.y*cos - point.z*sin,
+            point.y*sin + point.z *cos
+        )
+    }
+
+
+
+
+    fn show(&mut self, d: &mut RaylibDrawHandle<'_>, camera: &mut Camera3d){
+        let mut object_rotated: Vector3;
+        let mut object_translated: Vector3;
+        let mut camera_rotated: Vector3;
+        let mut camera_translated: Vector3;
+        
+        let mut other_object_rotated:Vector3;
+        let mut other_object_translated:Vector3;
+        let mut other_camera_rotated:Vector3;
+        let mut other_camera_translated:Vector3;
+        let mut _x:f32;
+        let mut _y:f32;
+
+        
+        //self.angle_x += 0.005;
+        //self.angle_y += 0.005;
+        //self.angle_z += 0.005;
 
         //affichage
-        for v in &all_vertex {
-            angle += 0.0001;
-            rotated = rotate(&v,angle);
+        for v in &self.points {
+            // rotate selon l'angle de la Shape3d
+            object_rotated = self.rotate_z(&v,self.angle_z);
+            object_rotated = self.rotate_y(&object_rotated,self.angle_y);
+            object_rotated = self.rotate_x(&object_rotated,self.angle_x);
             
-            let translated:Vector3 = Vector3::new(rotated.x, rotated.y + ALTITUDE, rotated.z + CUBE_DISTANCE);
-            (_x, _y) = to2d(&translated);
+            object_translated = Vector3::new(object_rotated.x + self.center.x , object_rotated.y + self.center.y , object_rotated.z + self.center.z);
 
 
-            let coords_screen: (i32, i32) = ortho_to_screen(_x, _y, &mut d);
-            //d.draw_rectangle(coords_screen.0, coords_screen.1, POINT_WIDTH, POINT_WIDTH, Color::RED);
-            let mut other_rotated:Vector3;
-            for other in &all_vertex {
-                other_rotated = rotate(&other,angle);
+            // rotate selon l'angle de la caméra (soustrait)
+            camera_rotated = self.rotate_z(&object_translated,camera.direction.z);
+            camera_rotated = self.rotate_y(&camera_rotated,camera.direction.y);
+            camera_rotated = self.rotate_x(&camera_rotated,camera.direction.x);
+
+            
+            
+            camera_translated = Vector3::new(camera_rotated.x - camera.position.x, camera_rotated.y - camera.position.y, camera_rotated.z - camera.position.z);
+            (_x, _y) = to2d(&camera_translated);
+
+
+            let coords_screen: (i32, i32) = ortho_to_screen(_x, _y, d);
+            d.draw_rectangle(coords_screen.0 - POINT_WIDTH/2 , coords_screen.1 - POINT_WIDTH/2, POINT_WIDTH, POINT_WIDTH, Color::RED);
+            
+            for other in &self.points {
+                other_object_rotated = self.rotate_z(&other,self.angle_z);
+                other_object_rotated = self.rotate_y(&other_object_rotated,self.angle_y);
+                other_object_rotated = self.rotate_x(&other_object_rotated,self.angle_x);
+
+                other_object_translated = Vector3::new(other_object_rotated.x + self.center.x , other_object_rotated.y + self.center.y , other_object_rotated.z + self.center.z);
+
+                other_camera_rotated = self.rotate_z(&other_object_translated,camera.direction.z);
+                other_camera_rotated = self.rotate_y(&other_camera_rotated,camera.direction.y);
+                other_camera_rotated = self.rotate_x(&other_camera_rotated,camera.direction.x);
+
                 
-                let other_translated:Vector3 = Vector3::new(other_rotated.x, other_rotated.y + ALTITUDE, other_rotated.z + CUBE_DISTANCE);
-                let (__x, __y) = to2d(&other_translated);
-                let other_coords = ortho_to_screen(__x, __y, &mut d);
+                other_camera_translated = Vector3::new(other_camera_rotated.x - camera.position.x, other_camera_rotated.y - camera.position.y, other_camera_rotated.z - camera.position.z);
+                let (__x, __y) = to2d(&other_camera_translated);
+                let other_coords = ortho_to_screen(__x, __y, d);
                 d.draw_line(
                     coords_screen.0,
                     coords_screen.1,
@@ -116,6 +159,178 @@ pub fn render_3d(rl:&mut RaylibHandle, thread : &mut RaylibThread){
                     Color::ORANGE
                 );
             }
+        }
+    }
+
+}
+
+
+fn create_scene()->Vec<Shape3d>{
+    let mut shapes: Vec<Shape3d> = Vec::new();
+    
+
+    // CUBE
+    let mut cube:Shape3d = Shape3d::new(0.25, 0.0, 1.0);
+
+    cube.points.push(Vector3::new(0.25, 0.25,0.25 ));   // haut droit fond
+    cube.points.push(Vector3::new(-0.25, 0.25,0.25 ));  // haut fauche fond
+    cube.points.push(Vector3::new(0.25, -0.25,0.25 ));  // bas droit fond
+    cube.points.push(Vector3::new(-0.25, -0.25,0.25 )); // bas gauche fond 
+
+    cube.points.push(Vector3::new(0.25, 0.25,-0.25 ));
+    cube.points.push(Vector3::new(-0.25, 0.25,-0.25 ));
+    cube.points.push(Vector3::new(0.25, -0.25,-0.25 ));
+    cube.points.push(Vector3::new(-0.25, -0.25,-0.25 ));
+
+    
+ 
+
+    // DIAMAND
+    let mut diamand:Shape3d = Shape3d::new(-0.25, 0.0, 1.0);
+ 
+    diamand.points.push(Vector3::new(0.0, 0.20, 0.0));
+    
+    diamand.points.push(Vector3::new(0.20, 0.20, 0.00));
+    diamand.points.push(Vector3::new(0.18, 0.20, 0.08));
+    diamand.points.push(Vector3::new(0.14, 0.20, 0.14));
+    diamand.points.push(Vector3::new(0.08, 0.20, 0.18));
+    diamand.points.push(Vector3::new(0.00, 0.20, 0.20));
+    diamand.points.push(Vector3::new(-0.08, 0.20, 0.18));
+    diamand.points.push(Vector3::new(-0.14, 0.20, 0.14));
+    diamand.points.push(Vector3::new(-0.18, 0.20, 0.08));
+    diamand.points.push(Vector3::new(-0.20, 0.20, 0.00));
+    diamand.points.push(Vector3::new(-0.18, 0.20, -0.08));
+    diamand.points.push(Vector3::new(-0.14, 0.20, -0.14));
+    diamand.points.push(Vector3::new(-0.08, 0.20, -0.18));
+    diamand.points.push(Vector3::new(0.00, 0.20, -0.20));
+    diamand.points.push(Vector3::new(0.08, 0.20, -0.18));
+    diamand.points.push(Vector3::new(0.14, 0.20, -0.14));
+    diamand.points.push(Vector3::new(0.18, 0.20, -0.08));
+
+    diamand.points.push(Vector3::new(0.35, 0.10, 0.00));
+    diamand.points.push(Vector3::new(0.32, 0.10, 0.14));
+    diamand.points.push(Vector3::new(0.25, 0.10, 0.25));
+    diamand.points.push(Vector3::new(0.14, 0.10, 0.32));
+    diamand.points.push(Vector3::new(0.00, 0.10, 0.35));
+    diamand.points.push(Vector3::new(-0.14, 0.10, 0.32));
+    diamand.points.push(Vector3::new(-0.25, 0.10, 0.25));
+    diamand.points.push(Vector3::new(-0.32, 0.10, 0.14));
+    diamand.points.push(Vector3::new(-0.35, 0.10, 0.00));
+    diamand.points.push(Vector3::new(-0.32, 0.10, -0.14));
+    diamand.points.push(Vector3::new(-0.25, 0.10, -0.25));
+    diamand.points.push(Vector3::new(-0.14, 0.10, -0.32));
+    diamand.points.push(Vector3::new(0.00, 0.10, -0.35));
+    diamand.points.push(Vector3::new(0.14, 0.10, -0.32));
+    diamand.points.push(Vector3::new(0.25, 0.10, -0.25));
+    diamand.points.push(Vector3::new(0.32, 0.10, -0.14));
+
+    diamand.points.push(Vector3::new(0.0, -0.4, 0.0));
+    
+
+    shapes.push(diamand);
+    shapes.push(cube);
+    shapes
+}
+
+
+
+pub fn render_3d(rl:&mut RaylibHandle, thread : &mut RaylibThread){
+   // let mut zoom_factor: f32 = 0.0;
+    
+
+    let mut camera:Camera3d = Camera3d::new();
+    
+
+    /*  
+   // let mut mouse_movement:raylib::ffi::Vector2;
+   // let mut all_vertex: Vec<Vector3> = Vec::new();
+
+
+    //let file = File::open(path);
+    //let reader = BufReader::new(file);
+    //SHAPES:Value = serde_json::from_reader(rdr)
+    
+    let json = r#"
+    [
+        {
+            "center" : {
+                "x" : 0.25,
+                "y" : 0.25,
+                "z" : 1.0
+            },
+            "points" : [
+                {"x" : 0.25, "y": 0.25, "z" : 0.25},
+                {"x" : -0.25, "y": 0.25, "z" :0.25},
+                {"x" : 0.25, "y": -0.25, "z" :0.25},
+                {"x" : -0.25, "y": -0.25, "z" :0.25},
+                {"x" : 0.25, "y": 0.25, "z" :-0.25},
+                {"x" : -0.25, "y": 0.25, "z" :-0.25},
+                {"x" : 0.25, "y": -0.25, "z" :-0.25},
+                {"x" : -0.25, "y": -0.25, "z" :-0.25}
+            ]
+        }
+    ]"#;
+
+
+    let shapes: Vec<JsonShape> = serde_json::from_str(json).unwrap();
+ 
+    */
+    
+    let mut shapes: Vec<Shape3d> = create_scene();
+
+    
+    while !rl.window_should_close(){
+        camera.position.z += rl.get_mouse_wheel_move()/20.0; 
+        
+        //mouse_movement = rl.get_mouse_wheel_move_v();
+
+        if rl.is_key_down(KeyboardKey::KEY_W){
+            camera.position.y -=0.01;
+        }
+        if rl.is_key_down(KeyboardKey::KEY_S){
+            camera.position.y +=0.01
+        }
+        if rl.is_key_down(KeyboardKey::KEY_A){
+            camera.position.x +=0.01
+        }
+        if rl.is_key_down(KeyboardKey::KEY_D){
+            camera.position.x -=0.01
+        }
+        if rl.is_key_down(KeyboardKey::KEY_RIGHT){
+            if rl.is_key_down(KeyboardKey::KEY_LEFT_SHIFT){
+                camera.direction.z +=0.01
+            }else{
+                camera.direction.y +=0.01
+            }
+        }
+        if rl.is_key_down(KeyboardKey::KEY_LEFT){
+            if rl.is_key_down(KeyboardKey::KEY_LEFT_SHIFT){
+                camera.direction.z -=0.01
+            }else{
+                camera.direction.y -=0.01
+            }
+        }
+        if rl.is_key_down(KeyboardKey::KEY_UP){
+            camera.direction.x +=0.01
+        }
+        if rl.is_key_down(KeyboardKey::KEY_DOWN){
+            camera.direction.x -=0.01
+        }
+ 
+
+      
+
+
+        let mut d: RaylibDrawHandle<'_> = rl.begin_drawing(thread);
+        d.clear_background(Color::BLANK);
+        
+        
+        for shape in &mut shapes{
+            //shape.center.z += zoom_factor;
+            //shape.center.y += altitude;
+            //shape.center.x += gauchedroite;
+            
+            shape.show(&mut d, &mut camera);
         }
 
 
@@ -128,11 +343,11 @@ pub fn render_3d(rl:&mut RaylibHandle, thread : &mut RaylibThread){
 
 
 fn ortho_to_screen(x:f32, y:f32, d: & RaylibDrawHandle<'_>)-> (i32, i32){
-    let WIDTH:f32 = d.get_screen_width() as f32;
-    let HEIGHT:f32 = d.get_screen_height() as f32;
+    let width:f32 = d.get_screen_width() as f32;
+    let height:f32 = d.get_screen_height() as f32;
     
-    let scr_x: f32 = (WIDTH/2.0) + x * (WIDTH/2.0);
-	let scr_y: f32 = (HEIGHT/2.0) + y * (HEIGHT/2.0) * -1.0;
+    let scr_x: f32 = (width/2.0) + x * (width/2.0);
+	let scr_y: f32 = (height/2.0) + y * (height/2.0) * -1.0;
     
     //println!("   from    ({},{})",x, y);
     //println!("  to      ({},{})", scr_x, scr_y);
@@ -141,17 +356,6 @@ fn ortho_to_screen(x:f32, y:f32, d: & RaylibDrawHandle<'_>)-> (i32, i32){
 
 
 
-fn rotate(point:&Vector3, angle:f32)->Vector3{
-	// tourne autour de l'axe y_
-	let cos = angle.cos();
-	let sin = angle.sin();
-
-	Vector3::new(
-		point.x*cos - point.z*sin,
-		point.y ,
-		point.x*sin + point.z*cos
-    )
-}
 
 
 

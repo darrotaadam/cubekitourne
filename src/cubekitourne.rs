@@ -110,6 +110,8 @@ impl Shape3d{
         let mut _x:f32;
         let mut _y:f32;
 
+        const CENTER_AXIS_LENGTH:f32 = 1.0;
+
         let mut fov_text: String = String::new();
         
         //self.angle_x += 0.005;
@@ -165,6 +167,89 @@ impl Shape3d{
                 );
             }
         }
+
+
+        //affichage du centre (0,0,0)
+        
+
+        let mut x_start:Vector3 = Vector3::new(-CENTER_AXIS_LENGTH - camera.position.x, 0.0 - camera.position.y, 0.0 - camera.position.z);
+        let mut x_end:Vector3 = Vector3::new( CENTER_AXIS_LENGTH - camera.position.x, 0.0 - camera.position.y, 0.0 - camera.position.z);
+        x_start = self.rotate_x(&x_start, -camera.direction.x);
+        x_start = self.rotate_y(&x_start, -camera.direction.y);
+        x_start = self.rotate_z(&x_start, -camera.direction.z);
+
+        x_end = self.rotate_x(&x_end, -camera.direction.x);
+        x_end = self.rotate_y(&x_end, -camera.direction.y);
+        x_end = self.rotate_z(&x_end, -camera.direction.z);
+
+        let (_x_start_x, _x_start_y) = to2d(&x_start, &camera);
+        let (_x_end_x, _x_end_y) = to2d(&x_end, &camera);
+
+        let x_start_coords = ortho_to_screen(_x_start_x, _x_start_y, d);
+        let x_end_coords = ortho_to_screen(_x_end_x, _x_end_y, d);
+
+        d.draw_line(
+                    x_start_coords.0 ,
+                    x_start_coords.1,
+                    x_end_coords.0,
+                    x_end_coords.1,
+                    Color::RED
+                );
+
+
+
+        let mut y_start:Vector3 = Vector3::new(0.0 - camera.position.x, -CENTER_AXIS_LENGTH - camera.position.y, 0.0 - camera.position.z);
+        let mut y_end:Vector3 = Vector3::new( 0.0 - camera.position.x, CENTER_AXIS_LENGTH - camera.position.y, 0.0 - camera.position.z);
+        y_start = self.rotate_x(&y_start, -camera.direction.x);
+        y_start = self.rotate_y(&y_start, -camera.direction.y);
+        y_start = self.rotate_z(&y_start, -camera.direction.z);
+
+        y_end = self.rotate_x(&y_end, -camera.direction.x);
+        y_end = self.rotate_y(&y_end, -camera.direction.y);
+        y_end = self.rotate_z(&y_end, -camera.direction.z);
+
+        let (_y_start_x, _y_start_y) = to2d(&y_start, &camera);
+        let (_y_end_x, _y_end_y) = to2d(&y_end, &camera);
+
+        let y_start_coords = ortho_to_screen(_y_start_x, _y_start_y, d);
+        let y_end_coords = ortho_to_screen(_y_end_x, _y_end_y, d);
+
+        d.draw_line(
+                    y_start_coords.0 ,
+                    y_start_coords.1,
+                    y_end_coords.0,
+                    y_end_coords.1,
+                    Color::BLUE
+                );
+
+
+        let mut z_start:Vector3 = Vector3::new(0.0 - camera.position.x, 0.0 - camera.position.y, -CENTER_AXIS_LENGTH - camera.position.z);
+        let mut z_end:Vector3 = Vector3::new( 0.0 - camera.position.x, 0.0 - camera.position.y, CENTER_AXIS_LENGTH - camera.position.z);
+        z_start = self.rotate_x(&z_start, -camera.direction.x);
+        z_start = self.rotate_y(&z_start, -camera.direction.y);
+        z_start = self.rotate_z(&z_start, -camera.direction.z);
+
+        z_end = self.rotate_x(&z_end, -camera.direction.x);
+        z_end = self.rotate_y(&z_end, -camera.direction.y);
+        z_end = self.rotate_z(&z_end, -camera.direction.z);
+
+        let (_z_start_x, _z_start_y) = to2d(&z_start, &camera);
+        let (_z_end_x, _z_end_y) = to2d(&z_end, &camera);
+
+        let z_start_coords = ortho_to_screen(_z_start_x, _z_start_y, d);
+        let z_end_coords = ortho_to_screen(_z_end_x, _z_end_y, d);
+
+        d.draw_line(
+                    z_start_coords.0 ,
+                    z_start_coords.1,
+                    z_end_coords.0,
+                    z_end_coords.1,
+                    Color::GREEN
+                );
+
+        
+
+
         fov_text.clear();
         fov_text.push_str("fov: ");
         fov_text.push_str(&camera.fov.to_string());
@@ -249,7 +334,7 @@ pub fn render_3d(rl:&mut RaylibHandle, thread : &mut RaylibThread){
     
 
     let mut camera:Camera3d = Camera3d::new();
-    
+    camera.position.z = -1.0;
 
     /*  
    // let mut mouse_movement:raylib::ffi::Vector2;

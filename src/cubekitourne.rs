@@ -110,10 +110,12 @@ impl Shape3d{
         let mut _x:f32;
         let mut _y:f32;
 
+        let mut fov_text: String = String::new();
         
         //self.angle_x += 0.005;
         //self.angle_y += 0.005;
-        //self.angle_z += 0.005;
+        //self.angle_z += 0.005
+        ;
 
         //affichage
         for v in &self.points {
@@ -137,7 +139,7 @@ impl Shape3d{
 
 
             let coords_screen: (i32, i32) = ortho_to_screen(_x, _y, d);
-            d.draw_rectangle(coords_screen.0 - POINT_WIDTH/2 , coords_screen.1 - POINT_WIDTH/2, POINT_WIDTH, POINT_WIDTH, Color::RED);
+            //d.draw_rectangle(coords_screen.0 - POINT_WIDTH/2 , coords_screen.1 - POINT_WIDTH/2, POINT_WIDTH, POINT_WIDTH, Color::RED);
             
             for other in &self.points {
                 other_object_rotated = self.rotate_z(&other,self.angle_z);
@@ -163,6 +165,11 @@ impl Shape3d{
                 );
             }
         }
+        fov_text.clear();
+        fov_text.push_str("fov: ");
+        fov_text.push_str(&camera.fov.to_string());
+        fov_text.push('°');
+        d.draw_text(&fov_text, d.get_screen_width()-50, 10, 10, Color::DARKGRAY);
     }
 
 }
@@ -173,7 +180,7 @@ fn create_scene()->Vec<Shape3d>{
     
 
     // CUBE
-    let mut cube:Shape3d = Shape3d::new(0.25, 0.0, 1.0);
+    let mut cube:Shape3d = Shape3d::new(0.25, 0.0, 0.25);
 
     cube.points.push(Vector3::new(0.25, 0.25,0.25 ));   // haut droit fond
     cube.points.push(Vector3::new(-0.25, 0.25,0.25 ));  // haut fauche fond
@@ -189,7 +196,7 @@ fn create_scene()->Vec<Shape3d>{
  
 
     // DIAMAND
-    let mut diamand:Shape3d = Shape3d::new(-0.25, 0.0, 1.0);
+    let mut diamand:Shape3d = Shape3d::new(-0.25, 0.0, -0.25);
  
     diamand.points.push(Vector3::new(0.0, 0.20, 0.0));
     
@@ -286,7 +293,6 @@ pub fn render_3d(rl:&mut RaylibHandle, thread : &mut RaylibThread){
         
         camera.fov += rl.get_mouse_wheel_move(); 
         camera.fov = camera.fov.clamp(30.0, 150.0);
-        println!("{}",camera.fov);
 
         if rl.is_key_down(KeyboardKey::KEY_W){
             if rl.is_key_down(KeyboardKey::KEY_LEFT_SHIFT){

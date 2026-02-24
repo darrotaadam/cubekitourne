@@ -2,15 +2,16 @@ use raylib::math::Vector3;
 use raylib::prelude::*;
 use std::thread;
 use std::time::Duration;
-use std::fs::File;
+/*use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
-use serde_json::{Value,Result};
-use serde::Deserialize;
+*/
+//use serde_json::{Value,Result};
+//use serde::Deserialize;
 
 const POINT_WIDTH:i32 = 5;
 
-
+/*
 #[derive(Deserialize)]
 struct JsonVector3{
     x: f32,
@@ -23,19 +24,21 @@ struct JsonShape{
     center: JsonVector3,
     points: Vec<JsonVector3>
 }
-
+*/
 
 
 struct Camera3d{
     position:Vector3,
-    direction:Vector3
+    direction:Vector3,
+    fov : f32
 }
 
 impl Camera3d{
     fn new()->Camera3d{
         Camera3d { 
             position: Vector3::new(0.0, 0.0, 0.0),
-            direction: Vector3::new(0.0, 0.0, 0.0) 
+            direction: Vector3::new(0.0, 0.0, 0.0),
+            fov : 90.0 
         }
     }
 }
@@ -123,14 +126,14 @@ impl Shape3d{
 
 
             // rotate selon l'angle de la caméra (soustrait)
-            camera_rotated = self.rotate_z(&object_translated,camera.direction.z);
-            camera_rotated = self.rotate_y(&camera_rotated,camera.direction.y);
-            camera_rotated = self.rotate_x(&camera_rotated,camera.direction.x);
+            camera_rotated = self.rotate_z(&object_translated,-camera.direction.z);
+            camera_rotated = self.rotate_y(&camera_rotated,-camera.direction.y);
+            camera_rotated = self.rotate_x(&camera_rotated,-camera.direction.x);
 
             
             
             camera_translated = Vector3::new(camera_rotated.x - camera.position.x, camera_rotated.y - camera.position.y, camera_rotated.z - camera.position.z);
-            (_x, _y) = to2d(&camera_translated);
+            (_x, _y) = to2d(&camera_translated, &camera);
 
 
             let coords_screen: (i32, i32) = ortho_to_screen(_x, _y, d);
@@ -143,13 +146,13 @@ impl Shape3d{
 
                 other_object_translated = Vector3::new(other_object_rotated.x + self.center.x , other_object_rotated.y + self.center.y , other_object_rotated.z + self.center.z);
 
-                other_camera_rotated = self.rotate_z(&other_object_translated,camera.direction.z);
-                other_camera_rotated = self.rotate_y(&other_camera_rotated,camera.direction.y);
-                other_camera_rotated = self.rotate_x(&other_camera_rotated,camera.direction.x);
+                other_camera_rotated = self.rotate_z(&other_object_translated,-camera.direction.z);
+                other_camera_rotated = self.rotate_y(&other_camera_rotated,-camera.direction.y);
+                other_camera_rotated = self.rotate_x(&other_camera_rotated,-camera.direction.x);
 
                 
                 other_camera_translated = Vector3::new(other_camera_rotated.x - camera.position.x, other_camera_rotated.y - camera.position.y, other_camera_rotated.z - camera.position.z);
-                let (__x, __y) = to2d(&other_camera_translated);
+                let (__x, __y) = to2d(&other_camera_translated, &camera);
                 let other_coords = ortho_to_screen(__x, __y, d);
                 d.draw_line(
                     coords_screen.0,
@@ -280,21 +283,32 @@ pub fn render_3d(rl:&mut RaylibHandle, thread : &mut RaylibThread){
 
     
     while !rl.window_should_close(){
-        camera.position.z += rl.get_mouse_wheel_move()/20.0; 
         
-        //mouse_movement = rl.get_mouse_wheel_move_v();
+        camera.fov += rl.get_mouse_wheel_move(); 
+        camera.fov = camera.fov.clamp(30.0, 150.0);
+        println!("{}",camera.fov);
 
         if rl.is_key_down(KeyboardKey::KEY_W){
-            camera.position.y -=0.01;
+            if rl.is_key_down(KeyboardKey::KEY_LEFT_SHIFT){
+                camera.position.z +=0.01;
+            }
+            else{
+                camera.position.y +=0.01;
+            }
         }
         if rl.is_key_down(KeyboardKey::KEY_S){
-            camera.position.y +=0.01
+            if rl.is_key_down(KeyboardKey::KEY_LEFT_SHIFT){
+                camera.position.z -=0.01;
+            }
+            else{
+                camera.position.y -=0.01;
+            }
         }
         if rl.is_key_down(KeyboardKey::KEY_A){
-            camera.position.x +=0.01
+            camera.position.x -=0.01
         }
         if rl.is_key_down(KeyboardKey::KEY_D){
-            camera.position.x -=0.01
+            camera.position.x +=0.01
         }
         if rl.is_key_down(KeyboardKey::KEY_RIGHT){
             if rl.is_key_down(KeyboardKey::KEY_LEFT_SHIFT){
@@ -359,6 +373,11 @@ fn ortho_to_screen(x:f32, y:f32, d: & RaylibDrawHandle<'_>)-> (i32, i32){
 
 
 
-fn to2d(point:&Vector3) -> (f32, f32){
-    return (point.x / point.z , point.y/point.z);
+fn to2d(point:&Vector3, camera:& Camera3d) -> (f32, f32){
+    let half_fov:f32 = camera.fov.to_radians()/2.0;
+
+    return (
+        point.x / ( point.z * half_fov.tan() ) ,
+        point.y/ ( point.z * half_fov.tan() )
+    );
 }

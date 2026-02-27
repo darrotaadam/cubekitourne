@@ -49,7 +49,8 @@ struct Shape3d {
     center : Vector3,
     angle_x : f32,
     angle_y : f32,
-    angle_z : f32
+    angle_z : f32,
+    color : Color
 }
 
 impl Shape3d{
@@ -59,7 +60,8 @@ impl Shape3d{
             center: Vector3::new(x, y, z) ,
             angle_x : 0.0,
             angle_y : 0.0,
-            angle_z : 0.0
+            angle_z : 0.0,
+            color : Color::ORANGE
         }
     }
 
@@ -110,10 +112,10 @@ impl Shape3d{
         let mut _x:f32;
         let mut _y:f32;
 
+
+        let mut fov_text: String = String::new();
+
         
-        //self.angle_x += 0.005;
-        //self.angle_y += 0.005;
-        //self.angle_z += 0.005;
 
         //affichage
         for v in &self.points {
@@ -137,7 +139,7 @@ impl Shape3d{
 
 
             let coords_screen: (i32, i32) = ortho_to_screen(_x, _y, d);
-            d.draw_rectangle(coords_screen.0 - POINT_WIDTH/2 , coords_screen.1 - POINT_WIDTH/2, POINT_WIDTH, POINT_WIDTH, Color::RED);
+            //d.draw_rectangle(coords_screen.0 - POINT_WIDTH/2 , coords_screen.1 - POINT_WIDTH/2, POINT_WIDTH, POINT_WIDTH, Color::RED);
             
             for other in &self.points {
                 other_object_rotated = self.rotate_z(&other,self.angle_z);
@@ -159,10 +161,25 @@ impl Shape3d{
                     coords_screen.1,
                     other_coords.0,
                     other_coords.1,
-                    Color::ORANGE
+                    self.color
                 );
             }
         }
+
+
+        //affichage du centre (0,0,0)
+        
+        //draw_xyz(&camera, &mut d);
+        
+
+        
+
+
+        fov_text.clear();
+        fov_text.push_str("fov: ");
+        fov_text.push_str(&camera.fov.to_string());
+        fov_text.push('°');
+        d.draw_text(&fov_text, d.get_screen_width()-50, 10, 10, Color::DARKGRAY);
     }
 
 }
@@ -173,7 +190,7 @@ fn create_scene()->Vec<Shape3d>{
     
 
     // CUBE
-    let mut cube:Shape3d = Shape3d::new(0.25, 0.0, 1.0);
+    let mut cube:Shape3d = Shape3d::new(0.25, 0.0, 0.25);
 
     cube.points.push(Vector3::new(0.25, 0.25,0.25 ));   // haut droit fond
     cube.points.push(Vector3::new(-0.25, 0.25,0.25 ));  // haut fauche fond
@@ -189,7 +206,7 @@ fn create_scene()->Vec<Shape3d>{
  
 
     // DIAMAND
-    let mut diamand:Shape3d = Shape3d::new(-0.25, 0.0, 1.0);
+    let mut diamand:Shape3d = Shape3d::new(-0.25, 0.0, -0.25);
  
     diamand.points.push(Vector3::new(0.0, 0.20, 0.0));
     
@@ -230,6 +247,27 @@ fn create_scene()->Vec<Shape3d>{
     diamand.points.push(Vector3::new(0.0, -0.4, 0.0));
     
 
+    const CENTER_AXIS_LENGTH:f32 = 1.0;
+
+    let mut x_axis:Shape3d = Shape3d::new(0.0, 0.0, 0.0);
+    x_axis.color = Color::RED;
+    x_axis.points.push(Vector3::new(-CENTER_AXIS_LENGTH, 0.0, 0.0));
+    x_axis.points.push(Vector3::new(CENTER_AXIS_LENGTH, 0.0, 0.0));
+    
+    let mut y_axis:Shape3d = Shape3d::new(0.0, 0.0, 0.0);
+    y_axis.color = Color::BLUE;
+    y_axis.points.push(Vector3::new(0.0, -CENTER_AXIS_LENGTH, 0.0));
+    y_axis.points.push(Vector3::new(0.0, CENTER_AXIS_LENGTH, 0.0));
+    
+    let mut z_axis:Shape3d = Shape3d::new(0.0, 0.0, 0.0);
+    z_axis.color = Color::GREEN;
+    z_axis.points.push(Vector3::new(0.0, 0.0, -CENTER_AXIS_LENGTH));
+    z_axis.points.push(Vector3::new(0.0, 0.0, CENTER_AXIS_LENGTH));
+
+    shapes.push(x_axis);
+    shapes.push(y_axis);
+    shapes.push(z_axis);
+
     shapes.push(diamand);
     shapes.push(cube);
     shapes
@@ -242,7 +280,7 @@ pub fn render_3d(rl:&mut RaylibHandle, thread : &mut RaylibThread){
     
 
     let mut camera:Camera3d = Camera3d::new();
-    
+    camera.position.z = -1.0;
 
     /*  
    // let mut mouse_movement:raylib::ffi::Vector2;
@@ -281,27 +319,29 @@ pub fn render_3d(rl:&mut RaylibHandle, thread : &mut RaylibThread){
     
     let mut shapes: Vec<Shape3d> = create_scene();
 
+
+    
+
     
     while !rl.window_should_close(){
         
         camera.fov += rl.get_mouse_wheel_move(); 
         camera.fov = camera.fov.clamp(30.0, 150.0);
-        println!("{}",camera.fov);
 
         if rl.is_key_down(KeyboardKey::KEY_W){
             if rl.is_key_down(KeyboardKey::KEY_LEFT_SHIFT){
-                camera.position.z +=0.01;
+                camera.position.y +=0.01;
             }
             else{
-                camera.position.y +=0.01;
+                camera.position.z +=0.01;
             }
         }
         if rl.is_key_down(KeyboardKey::KEY_S){
             if rl.is_key_down(KeyboardKey::KEY_LEFT_SHIFT){
-                camera.position.z -=0.01;
+                camera.position.y -=0.01;
             }
             else{
-                camera.position.y -=0.01;
+                camera.position.z -=0.01;
             }
         }
         if rl.is_key_down(KeyboardKey::KEY_A){
@@ -381,3 +421,88 @@ fn to2d(point:&Vector3, camera:& Camera3d) -> (f32, f32){
         point.y/ ( point.z * half_fov.tan() )
     );
 }
+
+
+
+
+/*
+fn draw_xyz(camera: &Camera3d, d:&RaylibDrawHandle<'_>){
+
+
+        const CENTER_AXIS_LENGTH:f32 = 1.0;
+
+    let mut x_start:Vector3 = Vector3::new(-CENTER_AXIS_LENGTH - camera.position.x, 0.0 - camera.position.y, 0.0 - camera.position.z);
+        let mut x_end:Vector3 = Vector3::new( CENTER_AXIS_LENGTH - camera.position.x, 0.0 - camera.position.y, 0.0 - camera.position.z);
+        x_start = self.rotate_x(&x_start, -camera.direction.x);
+        x_start = self.rotate_y(&x_start, -camera.direction.y);
+        x_start = self.rotate_z(&x_start, -camera.direction.z);
+
+        x_end = self.rotate_x(&x_end, -camera.direction.x);
+        x_end = self.rotate_y(&x_end, -camera.direction.y);
+        x_end = self.rotate_z(&x_end, -camera.direction.z);
+
+        let (_x_start_x, _x_start_y) = to2d(&x_start, &camera);
+        let (_x_end_x, _x_end_y) = to2d(&x_end, &camera);
+
+        let x_start_coords = ortho_to_screen(_x_start_x, _x_start_y, d);
+        let x_end_coords = ortho_to_screen(_x_end_x, _x_end_y, d);
+
+        d.draw_line(
+                    x_start_coords.0 ,
+                    x_start_coords.1,
+                    x_end_coords.0,
+                    x_end_coords.1,
+                    Color::RED
+                );
+
+
+
+        let mut y_start:Vector3 = Vector3::new(0.0 - camera.position.x, -CENTER_AXIS_LENGTH - camera.position.y, 0.0 - camera.position.z);
+        let mut y_end:Vector3 = Vector3::new( 0.0 - camera.position.x, CENTER_AXIS_LENGTH - camera.position.y, 0.0 - camera.position.z);
+        y_start = self.rotate_x(&y_start, -camera.direction.x);
+        y_start = self.rotate_y(&y_start, -camera.direction.y);
+        y_start = self.rotate_z(&y_start, -camera.direction.z);
+
+        y_end = self.rotate_x(&y_end, -camera.direction.x);
+        y_end = self.rotate_y(&y_end, -camera.direction.y);
+        y_end = self.rotate_z(&y_end, -camera.direction.z);
+
+        let (_y_start_x, _y_start_y) = to2d(&y_start, &camera);
+        let (_y_end_x, _y_end_y) = to2d(&y_end, &camera);
+
+        let y_start_coords = ortho_to_screen(_y_start_x, _y_start_y, d);
+        let y_end_coords = ortho_to_screen(_y_end_x, _y_end_y, d);
+
+        d.draw_line(
+                    y_start_coords.0 ,
+                    y_start_coords.1,
+                    y_end_coords.0,
+                    y_end_coords.1,
+                    Color::BLUE
+                );
+
+
+        let mut z_start:Vector3 = Vector3::new(0.0 - camera.position.x, 0.0 - camera.position.y, -CENTER_AXIS_LENGTH - camera.position.z);
+        let mut z_end:Vector3 = Vector3::new( 0.0 - camera.position.x, 0.0 - camera.position.y, CENTER_AXIS_LENGTH - camera.position.z);
+        z_start = self.rotate_x(&z_start, -camera.direction.x);
+        z_start = self.rotate_y(&z_start, -camera.direction.y);
+        z_start = self.rotate_z(&z_start, -camera.direction.z);
+
+        z_end = self.rotate_x(&z_end, -camera.direction.x);
+        z_end = self.rotate_y(&z_end, -camera.direction.y);
+        z_end = self.rotate_z(&z_end, -camera.direction.z);
+
+        let (_z_start_x, _z_start_y) = to2d(&z_start, &camera);
+        let (_z_end_x, _z_end_y) = to2d(&z_end, &camera);
+
+        let z_start_coords = ortho_to_screen(_z_start_x, _z_start_y, d);
+        let z_end_coords = ortho_to_screen(_z_end_x, _z_end_y, d);
+
+        d.draw_line(
+                    z_start_coords.0 ,
+                    z_start_coords.1,
+                    z_end_coords.0,
+                    z_end_coords.1,
+                    Color::GREEN
+                );
+*/
